@@ -2,27 +2,36 @@ import integrations from "./integrations/main.js";
 import renders from "./renders/main.js";
 import classes from "./classes/main.js";
 
-// INICIALIZADOS DATOS DE AMBIENTE
-const environmentData = {
-  // VARIABLE PARA RENDERIZADO
-  renderedType: "allProducts",
-  // OBTENER PRODUCTOS Y CATEGORIAS
-  allCategories: await integrations.categories.getCategories(),
-  allProducts: await integrations.products.getProducts(),
-  // INICIALIZANDO CLASES
-  users: new classes.users(),
-  wishList: new classes.wishList(),
-  shoppingCart: new classes.shoppingCart(),
-  currentUser: new classes.currentUser(),
+let environmentData = {};
+const renderPage = () => {
+  // RENDERIZAR NAVBAR
+  renders.navbar.renderNavbarOptions(environmentData);
+  // RENDERIZAR CATEGORIAS NAVBAR
+  renders.categories.renderCategories(environmentData);
+  // AGREGAR CLICKS DE NAVEGACION
+  renders.navbar.addNavBarClicks(environmentData);
+  // RENDERIZAR PRODUCTOS
+  renders.products.renderProducts(environmentData);
 };
-// RENDERIZAR NAVBAR
-renders.navbar.renderNavbarOptions(environmentData);
-// RENDERIZAR CATEGORIAS NAVBAR
-renders.categories.renderCategories(environmentData);
-// AGREGAR CLICKS DE NAVEGACION
-renders.navbar.addNavBarClicks(environmentData);
-// RENDERIZAR PRODUCTOS
-renders.products.renderProducts(environmentData);
+const initializeData = async () => {
+  environmentData = {
+    // VARIABLE PARA RENDERIZADO
+    renderedType: "allProducts",
+    // OBTENER PRODUCTOS Y CATEGORIAS
+    allCategories: await integrations.categories.getCategories(),
+    allProducts: await integrations.products.getProducts(),
+    // INICIALIZANDO CLASES
+    users: new classes.users(),
+    wishList: new classes.wishList(),
+    shoppingCart: new classes.shoppingCart(),
+    currentUser: new classes.currentUser(),
+  };
+  console.log(environmentData);
+  renderPage();
+};
+
+// INICIALIZAR DATOS DE AMBIENTE
+initializeData();
 
 /* 
 // ABRIR MODAL DE INICIO DE SESIÓN
