@@ -1,6 +1,6 @@
-import Swal from "sweetalert2";
 import integrations from "../integrations/main.js";
 import renders from "../renders/main.js";
+import alerts from "../alerts/main.js";
 
 const modifyQuantity = (environmentData, productId, quantity) => {
   const { allProducts, shoppingCart } = environmentData;
@@ -10,7 +10,7 @@ const modifyQuantity = (environmentData, productId, quantity) => {
 };
 
 const manageProductsWishList = (environmentData, productId) => {
-  const { wishList } = environmentData;
+  const { wishList, currentUser } = environmentData;
   // DETENER COMPORTAMIENTO DE HREF
   // event.preventDefault();
   // MARCAR/DESMARCAR PRODUCTO COMO FAVORITO
@@ -42,6 +42,8 @@ const renderProducts = (environmentData) => {
   let title = document.getElementById("title-products");
   let container = document.getElementById("products-container");
   let productList = "";
+  const filter = document.getElementById("search-input");
+  const filterValue = filter.value;
   const types = {};
   const dictionary = {
     electronics: "Electrónicos",
@@ -75,7 +77,9 @@ const renderProducts = (environmentData) => {
       return products;
     },
     aditional: `<button type="button" id="purchaseButton" class="btn btn-success ms-2 ${
-      shoppingCart.getTotalCart() > 0 ? "" : "disabled"
+      !shoppingCart.getTotalCart() > 0 || currentUser?.validated !== true
+        ? "disabled"
+        : ""
     }"> Procesar Compra </button>`,
   };
   types["wishList"] = {
@@ -112,7 +116,15 @@ const renderProducts = (environmentData) => {
     },
   };
   const selectedData = types[renderedType];
-  const selectedProducts = selectedData.setProducts(allProducts);
+  const selectedProducts = filterValue
+    ? selectedData
+        .setProducts(allProducts)
+        .filter((p) =>
+          (p?.title || "")
+            .toLowerCase()
+            .includes((filterValue || "").toLowerCase())
+        )
+    : selectedData.setProducts(allProducts);
   const selectedTitle = selectedData.title;
   const totalProducts = selectedProducts?.length || 0;
   selectedProducts.forEach((product) => {
@@ -159,9 +171,12 @@ const renderProducts = (environmentData) => {
             </p>
           </div>
           <div class="col-2">
-            <a class="text-decoration-none wish-list-toggle" href="#" data-value="${
-              product.id
-            }">
+            <div
+              class="btn wish-list-toggle border-0 p-0 ${
+                !currentUser?._id ? "disabled" : ""
+              }"
+              data-value="${product.id}"
+            >
               <i class="bi
                 bi-bookmark-${
                   !wishList.products.includes(product.id) ? "plus" : "dash"
@@ -173,7 +188,7 @@ const renderProducts = (environmentData) => {
                 me-4"
               >
               </i>
-            </a>
+            </div>
           </div>
         </div>
       </div>
@@ -204,14 +219,19 @@ const renderProducts = (environmentData) => {
         <div class="col-12 d-flex justify-content-center">
           <div
             class="btn-product-subtract-qty btn btn-danger text-warning w-50 p-3 rounded-0 ${
-              shoppingCart.idProducts().includes(product.id) ? "" : " disabled"
+              !shoppingCart.idProducts().includes(product.id) ||
+              currentUser?.validated !== true
+                ? "disabled"
+                : ""
             }"
             data-value="${product.id}"
           >
             Restar Unidad
           </div>
           <div
-            class="btn-product-add-qty btn btn-success text-warning w-50 p-3 rounded-0"
+            class="btn-product-add-qty btn btn-success text-warning w-50 p-3 rounded-0 ${
+              currentUser?.validated !== true ? "disabled" : ""
+            }""
             data-value="${product.id}"
           >
             Sumar Unidad
@@ -258,56 +278,42 @@ const renderProducts = (environmentData) => {
   // AGREGAR CLICK DE COMPRAR (SI EXISTE)
   const purchaseButton = document.getElementById("purchaseButton");
   if (purchaseButton) {
-    purchaseButton.addEventListener("click", function () {
-      const subTotal = shoppingCart.getTotalCart();
-      const iva = Math.round(subTotal * 0.19);
-      const total = subTotal + iva;
+    purchaseButton.addEventListener("click", async () => {
+      const subtotal = shoppingCart.getTotalCart();
+      const iva = Math.round(subtotal * 0.19);
+      const total = subtotal + iva;
       const userName = currentUser?.name || "Usuario";
       const userDNI = currentUser?.dni || '"No ingresado"';
       const userEmail = currentUser?.email || "joselbarrios317@gmail.com";
-      const messageBase = `
+      const message = `
         <div style="text-align: left;">
           <p>Estimado ${userName} con DNI ${userDNI}, ¿Desea comprar los siguientes artículos?:</p>
           <ul class="py-3">
             ${shoppingCart.listCart()}
           </ul>
           <div style="text-align: right;" class="py-5">
-            <p> SubTotal: $${subTotal.toLocaleString("de-DE")} </p>
+            <p> SubTotal: $${subtotal.toLocaleString("de-DE")} </p>
             <p> IVA: $${iva.toLocaleString("de-DE")} </p>
             <p> Total: $${total.toLocaleString("de-DE")} </p>
           </div>
+          <p> El comprobante de la compra se enviará via correo.</p>
+        </div>
       `;
-      const messageAlert =
-        messageBase +
-        "<p> El comprobante de la compra se enviará via correo.</p></div>";
-      const messageEmail =
-        messageBase +
-        "<p> Muchas gracias por tu compra, regresa pronto.</p></div>";
-      Swal.fire({
-        title: "<strong> Finalizar compra </strong>",
-        icon: "info",
-        html: messageAlert,
-        showCloseButton: true,
-        showCancelButton: true,
-        focusConfirm: false,
-        confirmButtonText: `
-          <i class="bi bi-cart4"></i> Comprar!
-        `,
-        confirmButtonAriaLabel: "Comprar",
-        cancelButtonText: `
-          <i class="bi bi-x-octagon"></i> Volver!
-        `,
-        cancelButtonAriaLabel: "Volver",
-        customClass: {
-          popup: "purchase-popup",
-        },
-      }).then((result) => {
-        if (result.isConfirmed) {
-          integrations.sendEmails.sendEmail(userName, messageEmail, userEmail);
-          shoppingCart.emptyCart();
-          renderProducts(environmentData);
-        }
-      });
+      const purchaseAlert = await alerts.purchase.confirmPurchase(message);
+      if (purchaseAlert.isConfirmed) {
+        const templateParams = {
+          userName,
+          userDNI,
+          products: shoppingCart.listCart(),
+          subtotal,
+          iva,
+          total,
+          toEmail: userEmail,
+        };
+        integrations.purchaseEmail.proccessPurchase(templateParams);
+        shoppingCart.emptyCart();
+        renderProducts(environmentData);
+      }
     });
   }
 };

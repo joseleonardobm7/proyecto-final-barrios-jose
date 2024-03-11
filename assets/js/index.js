@@ -10,8 +10,12 @@ const renderPage = () => {
   renders.categories.renderCategories(environmentData);
   // AGREGAR CLICKS DE NAVEGACION
   renders.navbar.addNavBarClicks(environmentData);
+  // RENDERIZAR OPCIONES DE USUARIO
+  renders.navbar.renderUserOptions(environmentData);
   // RENDERIZAR PRODUCTOS
   renders.products.renderProducts(environmentData);
+  // ABRIR MODAL DE INICIO DE SESIÓN
+  renders.login.showLoginModal(environmentData);
 };
 const initializeData = async () => {
   environmentData = {
@@ -26,7 +30,6 @@ const initializeData = async () => {
     shoppingCart: new classes.shoppingCart(),
     currentUser: new classes.currentUser(),
   };
-  console.log(environmentData);
   renderPage();
 };
 

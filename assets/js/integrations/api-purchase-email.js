@@ -1,13 +1,9 @@
-const sendEmail = async (userName, message, toEmail) => {
+const proccessPurchase = async (templateParams) => {
   const data = {
     service_id: "my_principal_mail",
-    template_id: "latienditadelaesquina",
+    template_id: "purchaseLTDLE",
     user_id: "2-FDQ6TmYR6OyZdta",
-    template_params: {
-      userName,
-      message,
-      toEmail,
-    },
+    template_params: { ...templateParams },
   };
   try {
     const response = await fetch(
@@ -29,5 +25,5 @@ const sendEmail = async (userName, message, toEmail) => {
 
 // EXPORTAR
 export default {
-  sendEmail,
+  proccessPurchase,
 };

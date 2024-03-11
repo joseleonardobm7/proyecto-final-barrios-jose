@@ -2,7 +2,10 @@ import global from "../global/main.js";
 
 export default class shoppingCartClass {
   constructor() {
-    this.products = global.ls.getLocalStorage("shoppingCart") || [];
+    const shoppingCart = global.ls.getLocalStorage("shoppingCart") || {};
+    const currentUser = global.ls.getLocalStorage("currentUser") || {};
+    const userCart = shoppingCart[currentUser?._id] || [];
+    this.products = [...userCart];
   }
   addProduct(allProducts, id, quantity) {
     const existingProduct = allProducts.find((p) => p.id === id);
@@ -25,7 +28,10 @@ export default class shoppingCartClass {
     } else {
       console.error("No se encontró el Producto con #" + id + "!");
     }
-    global.ls.setLocalStorage("shoppingCart", this.products);
+    const shoppingCart = global.ls.getLocalStorage("shoppingCart") || {};
+    const currentUser = global.ls.getLocalStorage("currentUser") || {};
+    shoppingCart[currentUser?._id] = [...this.products];
+    global.ls.setLocalStorage("shoppingCart", shoppingCart);
   }
   listCart() {
     return this.products
@@ -56,6 +62,15 @@ export default class shoppingCartClass {
   }
   emptyCart() {
     this.products.splice(0, this.products.length);
-    global.ls.setLocalStorage("shoppingCart", this.products);
+    const shoppingCart = global.ls.getLocalStorage("shoppingCart") || {};
+    const currentUser = global.ls.getLocalStorage("currentUser") || {};
+    delete shoppingCart[currentUser?._id];
+    global.ls.setLocalStorage("shoppingCart", shoppingCart);
+  }
+  setShoppingCart() {
+    const shoppingCart = global.ls.getLocalStorage("shoppingCart") || {};
+    const currentUser = global.ls.getLocalStorage("currentUser") || {};
+    const userCart = shoppingCart[currentUser?._id] || [];
+    this.products = [...userCart];
   }
 }
